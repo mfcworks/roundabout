@@ -3,14 +3,14 @@ package roundabout;
 // 車の情報の格納
 public class Car {
 	// 車番(要るのか？)
-	private int num;
+	public int num;
 
 	// 出発地、目的地
 	private int[] origin, destination;
 
 	// この車が座標[i][j]の交差点[α]で
-	// 交差点を回る(0)か道路に抜ける(1)か
-	public int alpha[][][];
+	// 交差点を回る(false)か道路に抜ける(true)か
+	public boolean alpha[][][];
 
 	/**
 	 * コンストラクタ
@@ -24,6 +24,10 @@ public class Car {
 		selectDestination();
 		selectRoute();
 
+	}
+
+	public boolean getDirection(int i, int j, int alpha) {
+		return this.alpha[i][j][alpha];
 	}
 
 
