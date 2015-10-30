@@ -78,7 +78,7 @@ public class Cell {
 	 * @param right  右(r+x)に隣接するセル
 	 * @param bottom 下(r+y)に隣接するセル
 	 */
-	public void setNeighbor(Cell left, Cell top, Cell right, Cell bottom) {
+	public void setNeighbors(Cell left, Cell top, Cell right, Cell bottom) {
 		this.left = left;		// r-x
 		this.top = top;			// r-y
 		this.right = right;		// r+x
@@ -380,7 +380,8 @@ public class Cell {
 			// 交差点(α,0)にいる車
 			Car car = carList.get(num[u][0]);
 			// 交差点(i,j,α)を回るか、抜けるか
-			a[u] = car.alpha[cellI][cellJ][u];
+//			a[u] = car.alpha[cellI][cellJ][u];
+			a[u] = car.alpha[u];
 		}
 	}
 }

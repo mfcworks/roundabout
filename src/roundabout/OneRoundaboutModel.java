@@ -2,7 +2,6 @@ package roundabout;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 /**
  * １交差点モデル（L = 1, m = 比較的長い）
@@ -29,6 +28,36 @@ public class OneRoundaboutModel {
 		this.m = m;
 
 		cell = new Cell(0, 0, m);
+
+		// セルの接続を設定する。今回は1つのセルで周期境界にする。
+		cell.setNeighbors(cell, cell, cell, cell);
+
+
+		/*
+			// ★セル同士の結合の設定
+			// システムを上空から見た場合、左上(top-left)を[0][0]、
+			// 右下(right-bottom)を[L-1][L-1]の座標になるようにする。
+			// インデックス[i][j]は、[左右方向][上下方向]の順で用いる。
+			for (int i = 0; i < L; i++) {
+				for (int j = 0; j < L; j++) {
+					// [i][j]のleftは[i-1][j]
+					int left   = i==0 ? L-1 : i-1;
+					// [i][j]のtopは[i][j-1]
+					int top    = j==0 ? L-1 : j-1;
+					// [i][j]のrightは[i+1][j]
+					int right  = i==L-1 ? 0 : i+1;
+					// [i][j]のbottomは[i][j+1]
+					int bottom = j==L-1 ? 0 : j+1;
+
+					cells[i][j].setNeighbor(
+							cells[left][j],
+							cells[i][top],
+							cells[right][j],
+							cells[i][bottom]);
+				}
+			}
+		 */
+
 	}
 
 	/**
@@ -38,22 +67,24 @@ public class OneRoundaboutModel {
 	 */
 	public void initialize(int numCars) {
 
+		// 1セルの全サイト数 = 4 * (m + 1)
+		// 車の数はそれより少ない必要がある。
+		// ※ 正方格子系の場合は i * j * 4 * (m + 1) にする。
+		assert (numCars <= 4 * (m + 1));
+
 		cars = new ArrayList<Car>(numCars);
+
+		// dummy car (empty)
+		cars.add(0, new Car(0));
 
 		// CellとCarでの相互参照ができるようにする
 		Cell.carList = cars;
 		Car.cell = cell;
+		Car.m = this.m;
 
-		Random r = new Random();
-		int num = 0;
-		while (num < numCars) {
-			// ランダムなサイトを選ぶ
-			int a = r.nextInt(m);
-			int b = r.nextInt(m);
-
-			if (cells[i][j].initCar(a, b, num)) {
-				num++;
-			}
+		// numCars 台の車を発生
+		for (int i = 1; i <= numCars; i++) {
+			cars.add(i, new Car(i));
 		}
 	}
 
@@ -68,20 +99,81 @@ public class OneRoundaboutModel {
 
 	// 境界条件の処理
 	public void spwanAndDespawn() {
-
+		// 周期境界でずっと回り続けるので、
+		// とりあえずは実装しなくて良い。
 	}
+
+
+	private String mk(int val) {
+		return (val == 1 ? "*" : "･");
+	}
+
+	// mが偶数のときのみ使える簡易テキストプロッタ
+	public void textPlot() {
+		if (m % 2 != 0) return;
+
+		int half = m / 2;
+
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < half; i++)
+			sb.append(" ");
+
+		String blank = sb.toString();
+
+		// 上に出た縦の道路
+		for (int i = 0; i < half; i++) {
+			System.out.print(blank);
+			System.out.print(mk(cell.mu[1][half-i]));
+			System.out.println(mk(cell.mu[3][half+i+1]));
+		}
+
+		// 横の道路の上側
+		for (int i = 0; i < half; i++)
+			System.out.print(mk(cell.mu[2][half+1+i]));
+		System.out.print(mk(cell.mu[1][0]));
+		for (int i = 0; i < half + 1; i++)
+			System.out.print(mk(cell.mu[2][i]));
+		System.out.println();
+
+		// 横の道路の下側
+		for (int i = half; i >= 0; i--)
+			System.out.print(mk(cell.mu[0][i]));
+		System.out.print(mk(cell.mu[3][0]));
+		for (int i = m; i > half; i--)
+			System.out.print(mk(cell.mu[0][i]));
+		System.out.println();
+
+		// 下に出た縦の道路
+		for (int i = 0; i < half; i++) {
+			System.out.print(blank);
+			System.out.print(mk(cell.mu[1][m-i]));
+			System.out.println(mk(cell.mu[3][i+1]));
+		}
+
+		System.out.println();
+	}
+
 
 
 	// ----- test -----
 	public static void main(String[] args) {
-		int my_m = 4;
-		int my_n = 10;
+		int my_m = 20;
+		int my_n = 20;
 
 		// モデルを作る
 		OneRoundaboutModel model = new OneRoundaboutModel(my_m);
 
 		// 初期状態の生成
 		model.initialize(my_n);
+
+		model.textPlot();
+		System.out.println("update");
+		model.update();
+		model.textPlot();
+		System.out.println("正常に完了しました");
+
+
+
 	}
 
 }
