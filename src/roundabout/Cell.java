@@ -88,16 +88,19 @@ public class Cell {
 
 	/**
 	 * 単位セルの時間発展(アップデート)を行ないます。
+	 *
+	 * @return 動いた車の台数
 	 */
-	public void updateCell() {
+	public int updateCell() {
 		// 変数 a の反映
 		updateA();
 		//交差点サイトのアップデート
 		updateRoundabouts();
 		// 道路サイトのアップデート
 		updateRoads();
-	}
 
+		return countMoved();
+	}
 
 	/**
 	 * バッファをスワップします。
@@ -116,6 +119,24 @@ public class Cell {
 			num_new = num1;
 		}
 		swapFlag = !swapFlag;
+	}
+
+
+	/**
+	 * アップデートの前後で動いた車の台数を数えて返します。
+	 *
+	 * @return 動いた車の台数
+	 */
+	private int countMoved() {
+		int c = 0;
+
+		for (int i = 0; i < 4; i++) {
+			for (int j = 0; j < m + 1; j++) {
+				c += (num[i][j] != num_new[i][j] ? 1 : 0);
+			}
+		}
+
+		return c;
 	}
 
 
@@ -377,11 +398,13 @@ public class Cell {
 	 */
 	private void updateA() {
 		for (int u = 0; u < 4; u++) {
-			// 交差点(α,0)にいる車
-			Car car = carList.get(num[u][0]);
-			// 交差点(i,j,α)を回るか、抜けるか
-//			a[u] = car.alpha[cellI][cellJ][u];
-			a[u] = car.alpha[u];
+			// 交差点(α,0)に車がいるとき
+			if (num[u][0] != 0) {
+				Car car = carList.get(num[u][0]);
+				// 交差点(i,j,α)を回るか、抜けるか
+//				a[u] = car.alpha[cellI][cellJ][u];
+				a[u] = car.alpha[u];
+			}
 		}
 	}
 }

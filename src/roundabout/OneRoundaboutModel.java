@@ -159,6 +159,8 @@ public class OneRoundaboutModel {
 	public static void main(String[] args) {
 		int my_m = 20;
 		int my_n = 20;
+		
+		OneRoundaboutView view = new OneRoundaboutView(600, 600);
 
 		// モデルを作る
 		OneRoundaboutModel model = new OneRoundaboutModel(my_m);
