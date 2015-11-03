@@ -159,7 +159,7 @@ public class OneRoundaboutModel {
 	public static void main(String[] args) {
 		int my_m = 20;
 		int my_n = 20;
-		
+
 		OneRoundaboutView view = new OneRoundaboutView(600, 600);
 
 		// モデルを作る
@@ -174,7 +174,7 @@ public class OneRoundaboutModel {
 		model.textPlot();
 		System.out.println("正常に完了しました");
 
-
+		view.drawCell(model.cell);
 
 	}
 

@@ -20,8 +20,8 @@ public class Cell {
 	// 車情報のリストへのアクセス
 	public static List<Car> carList;
 
-	// 道路サイトの数
-	private int m;
+	// 道路サイトの数 (Viewクラスから参照するためpublicに変更)
+	public int m;
 	// 自分のセルがどこの位置にあるかを知っている必要がある。
 	private int cellI, cellJ;
 

@@ -61,7 +61,12 @@ public class OneRoundaboutView extends JPanel {
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
 
-		drawImpl(g);
+		if (cell != null) drawImpl(g);
+	}
+
+	// 中心(x, y), 半径rの閉じた円を描画
+	private static void circle(Graphics g, int x, int y, int r) {
+		g.fillOval(x - r, y - r, 2 * r, 2 * r);
 	}
 
 	// 実際に描画する処理
@@ -70,11 +75,77 @@ public class OneRoundaboutView extends JPanel {
 		g.setColor(Color.WHITE);
 		g.fillRect(0, 0, getWidth(), getHeight());
 
-		g.setColor(Color.BLACK);
+		g.setColor(Color.BLUE);
 
-		// TODO: XXX: 描画処理を実装する
-		for (int i = 0; i < 4; i++) {
-			//for ...
+
+		int offsetX = 10, offsetY = 10; // 描画起点位置
+		int unit = 20; // 単位要素のサイズ
+
+		int m = cell.m;
+		assert m % 2 == 0; // mは偶数を仮定
+
+		int mh = m / 2; // m half
+
+		/*
+		 * 枠線を描画
+		 */
+		g.setColor(Color.BLACK);
+		for (int i = 0; i < 3; i++) {
+			// 縦方向の車線の縦の長い線
+			int x = offsetX + unit * (mh + i);
+			int y = offsetY + unit * (m + 2);
+			g.drawLine(x, offsetY, x, y);
+			// 横方向の車線の横の長い線
+			x = offsetX + unit * (m + 2);
+			y = offsetY + unit * (mh + i);
+			g.drawLine(offsetX, y, x, y);
 		}
+		for (int i = 0; i < m + 3; i++) {
+			// 縦方向の車線の横の短い線
+			int x = offsetX + unit * mh;
+			int y = offsetY + unit * i;
+			g.drawLine(x, y, x + unit * 2, y);
+			// 横方向の車線の縦の短い線
+			x = offsetX + unit * i;
+			y = offsetY + unit * mh;
+			g.drawLine(x, y, x, y + unit * 2);
+		}
+
+		/*
+		 * 車を描画
+		 */
+		int[] x = {offsetX + unit * mh, offsetX + unit * mh,
+				offsetX + unit * (mh + 1), offsetX + unit * (mh + 1)};
+		int[] y = {offsetY + unit * (mh + 1), offsetY + unit * mh,
+				offsetY + unit * mh, offsetY + unit * (mh + 1)};
+		for (int i = 0; i < m + 1; i++) {
+			for (int a = 0; a < 4; a++) {
+				if (cell.mu[a][i] == 1) {
+					int e = 2; // サイズ調整の縁
+					g.setColor(Color.CYAN);
+					g.fillOval(x[a] + e, y[a] + e, unit - 2*e, unit - 2*e);
+					g.setColor(Color.BLACK);
+					String snum = String.valueOf(cell.num[a][i]);
+					g.drawString((snum.length() == 1 ? " " + snum : snum), x[a]+3, y[a]+15);
+				}
+				switch (a) {
+				case 0: x[0] -= unit; break;
+				case 1: y[1] -= unit; break;
+				case 2: x[2] += unit; break;
+				case 3: y[3] += unit; break;
+				}
+			}
+
+			if (i != mh) continue;
+			//切り替え
+			x[0] = offsetX + unit * (m + 1);
+			y[1] = offsetY + unit * (m + 1);
+			x[2] = offsetX;
+			y[3] = offsetY;
+		}
+
+
+
+
 	}
 }
