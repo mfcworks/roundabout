@@ -114,6 +114,7 @@ public class OneRoundaboutView extends JPanel {
 		/*
 		 * 車を描画
 		 */
+		String[] arrows = {"←", "↑", "→", "↓"};
 		int[] x = {offsetX + unit * mh, offsetX + unit * mh,
 				offsetX + unit * (mh + 1), offsetX + unit * (mh + 1)};
 		int[] y = {offsetY + unit * (mh + 1), offsetY + unit * mh,
@@ -127,6 +128,9 @@ public class OneRoundaboutView extends JPanel {
 					g.setColor(Color.BLACK);
 					String snum = String.valueOf(cell.num[a][i]);
 					g.drawString((snum.length() == 1 ? " " + snum : snum), x[a]+3, y[a]+15);
+				} else if (i != 0) {
+					g.setColor(Color.BLACK);
+					g.drawString(arrows[a], x[a]+5, y[a]+15);
 				}
 				switch (a) {
 				case 0: x[0] -= unit; break;
@@ -143,9 +147,5 @@ public class OneRoundaboutView extends JPanel {
 			x[2] = offsetX;
 			y[3] = offsetY;
 		}
-
-
-
-
 	}
 }
