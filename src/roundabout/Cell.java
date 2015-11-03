@@ -398,7 +398,7 @@ public class Cell {
 	 */
 	private void updateA() {
 		for (int u = 0; u < 4; u++) {
-			// 交差点(α,0)に車がいるとき
+			// 交差点(α,0)に車がいるとき (車がいないサイトについてはa[x]は参照されない)
 			if (num[u][0] != 0) {
 				Car car = carList.get(num[u][0]);
 				// 交差点(i,j,α)を回るか、抜けるか

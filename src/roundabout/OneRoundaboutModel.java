@@ -39,6 +39,9 @@ public class OneRoundaboutModel {
 			// システムを上空から見た場合、左上(top-left)を[0][0]、
 			// 右下(right-bottom)を[L-1][L-1]の座標になるようにする。
 			// インデックス[i][j]は、[左右方向][上下方向]の順で用いる。
+			// なお、原論文では、上下方向の軸は上に行くほど小となっている。
+			// 本実装では、利便性のため、これを逆転させているが、
+			// 表記が変わるだけで本質的には何の違いもない。
 			for (int i = 0; i < L; i++) {
 				for (int j = 0; j < L; j++) {
 					// [i][j]のleftは[i-1][j]
@@ -174,10 +177,10 @@ public class OneRoundaboutModel {
 		System.out.println("初期状態");
 		model.textPlot();
 		view.drawCell(model.cell);
-		
+
 		System.out.print("Enter to continue:");
 		sc.nextLine();
-		
+
 		model.update();
 		model.textPlot();
 		view.drawCell(model.cell);
