@@ -166,7 +166,7 @@ public class OneRoundaboutModel {
 
 		Scanner sc = new Scanner(System.in);
 
-		OneRoundaboutView view = new OneRoundaboutView(600, 600);
+		OneRoundaboutView view = new OneRoundaboutView(500, 500);
 
 		// モデルを作る
 		OneRoundaboutModel model = new OneRoundaboutModel(my_m);
@@ -174,16 +174,18 @@ public class OneRoundaboutModel {
 		// 初期状態の生成
 		model.initialize(my_n);
 
-		System.out.println("初期状態");
-		model.textPlot();
-		view.drawCell(model.cell);
+		int updateMax = 20;
 
-		System.out.print("Enter to continue:");
-		sc.nextLine();
-
-		model.update();
-		model.textPlot();
-		view.drawCell(model.cell);
+		for (int i = 0; i < updateMax; i++) {
+			view.drawCell(model.cell);
+			view.saveImage(String.valueOf(i));
+			model.update();
+			try {
+				Thread.sleep(500);
+			} catch (InterruptedException e) {
+				System.out.println(e.getMessage());
+			}
+		}
 
 		System.out.println("終了");
 	}

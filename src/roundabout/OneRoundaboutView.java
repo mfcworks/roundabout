@@ -2,7 +2,11 @@ package roundabout;
 
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 
+import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
@@ -10,6 +14,7 @@ public class OneRoundaboutView extends JPanel {
 
 	private JFrame frame;
 	private Cell cell;
+	private BufferedImage bufImage;
 
 	/**
 	 * ウィンドウを作成します。
@@ -42,6 +47,8 @@ public class OneRoundaboutView extends JPanel {
 
 		// メインウィンドウを表示する
 		frame.setVisible(true);
+
+		bufImage = new BufferedImage(winX, winY, BufferedImage.TYPE_INT_RGB);
 	}
 
 
@@ -61,7 +68,11 @@ public class OneRoundaboutView extends JPanel {
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
 
-		if (cell != null) drawImpl(g);
+		Graphics imageGraphics = bufImage.getGraphics();
+
+		if (cell != null) drawImpl(imageGraphics);
+
+		g.drawImage(bufImage, 0, 0, null);
 	}
 
 	// 中心(x, y), 半径rの閉じた円を描画
@@ -73,7 +84,7 @@ public class OneRoundaboutView extends JPanel {
 	private void drawImpl(Graphics g) {
 		// 背景を 白色 で塗りつぶす
 		g.setColor(Color.WHITE);
-		g.fillRect(0, 0, getWidth(), getHeight());
+		g.fillRect(0, 0, bufImage.getWidth(), bufImage.getHeight());
 
 		g.setColor(Color.BLUE);
 
@@ -143,9 +154,14 @@ public class OneRoundaboutView extends JPanel {
 			x[2] = offsetX;
 			y[3] = offsetY;
 		}
+	}
 
-
-
-
+	// 画像を保存する
+	public void saveImage(String fileNameWithoutExt) {
+		try {
+			ImageIO.write(bufImage, "BMP", new File(fileNameWithoutExt + ".bmp"));
+		} catch (IOException e) {
+			System.out.println("画像を保存できません！");
+		}
 	}
 }
