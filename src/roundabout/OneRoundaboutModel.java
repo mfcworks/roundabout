@@ -2,6 +2,7 @@ package roundabout;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 /**
  * １交差点モデル（L = 1, m = 比較的長い）
@@ -160,6 +161,8 @@ public class OneRoundaboutModel {
 		int my_m = 20;
 		int my_n = 20;
 
+		Scanner sc = new Scanner(System.in);
+
 		OneRoundaboutView view = new OneRoundaboutView(600, 600);
 
 		// モデルを作る
@@ -168,14 +171,18 @@ public class OneRoundaboutModel {
 		// 初期状態の生成
 		model.initialize(my_n);
 
+		System.out.println("初期状態");
 		model.textPlot();
-		System.out.println("update");
+		view.drawCell(model.cell);
+		
+		System.out.print("Enter to continue:");
+		sc.nextLine();
+		
 		model.update();
 		model.textPlot();
-		System.out.println("正常に完了しました");
-
 		view.drawCell(model.cell);
 
+		System.out.println("終了");
 	}
 
 }

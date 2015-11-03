@@ -384,10 +384,10 @@ public class Cell {
 			 */
 			for (int i = 2; i <= m - 1; i++) {
 				// 後ろの車が移動する場合(第1項)または前に車がいて動けない場合(第2項)
-				mu_new[u][i] = (mu[u][i-1] * (1-mu[u][i])) + (mu[u][i] * mu[u][u+1]);
+				mu_new[u][i] = (mu[u][i-1] * (1-mu[u][i])) + (mu[u][i] * mu[u][i+1]);
 
 				num_new[u][i] = num[u][i-1] * (mu[u][i-1] * (1-mu[u][i]))
-						+ num[u][i] * (mu[u][i] * mu[u][u+1]);
+						+ num[u][i] * (mu[u][i] * mu[u][i+1]);
 			}
 		}
 	}
