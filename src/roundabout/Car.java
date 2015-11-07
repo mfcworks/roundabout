@@ -5,18 +5,18 @@ import java.util.Random;
 /**
  * 車の情報を扱うクラス（正方格子系バージョン）
  *
- * 単一セルの周期境界とする。
- * 車は常に直進するものとする。
+ * 周期的境界条件はない。
  *
  * @author T. Miyazaki
  *
  */
 public class Car {
 
-	// セル(配列)への参照
-	public static Cell cell;
+	// モデルインスタンスへの参照(基本的な情報はここから参照する)
+	public static OneRoundaboutModel model;
 
-	public static int m;
+	// セル(配列)への参照
+	public static Cell[][] cells;
 
 	// 車番
 	public int num;
@@ -26,7 +26,7 @@ public class Car {
 
 	// この車が座標[i][j]の交差点[α]で
 	// 交差点を回る(0)か道路に抜ける(1)か
-	public int alpha[];
+	public int alpha[][][];
 
 	/**
 	 * コンストラクタ
@@ -57,55 +57,90 @@ public class Car {
 
 
 	/*
-	 * 出発地を決める
+	 * 出発地を決める：
+	 *
+	 * 少なくとも車が置けるサイトを見つける。
 	 */
 	private void selectOrigin() {
 		// [i][j][a][b]
 		// 交差点番号[a] 道路番号[b]
-		origin = new int[2];
+		origin = new int[4];
 
 		Random r = new Random();
 		/*
 		 * 1. ランダムに位置pを決める。
 		 * 2. 位置pに車がいなければ、
 		 * 3.   pを出発地とする。
-		 * 4.   cellsの位置pに車を置く。
+		 * 4.   cellsの位置pに車を置く。←あとでやる
 		 * 5. 位置pに車がいれば1.に戻る
 		 */
 
-		int i, j;
+		int i, j, a, b;
 		do {
-			i = r.nextInt(4);
-			j = r.nextInt(m + 1);
-		} while (!cell.spawnCar(i, j, num));
+			i = r.nextInt(model.L);
+			j = r.nextInt(model.L);
+			a = r.nextInt(4);
+			b = r.nextInt(model.m + 1);
+		} while (!cells[i][j].isValidSite(a, b) || cells[i][j].mu[a][b] == 1);
 
-		origin[0] = i; // 交差点番号をセット
-		origin[1] = j; // 道路番号をセット
+		// 出発地の座標を設定
+		origin[0] = i;
+		origin[1] = j;
+		origin[2] = a;
+		origin[3] = b;
 	}
 
-	// 目的地を決める
+	/*
+	 * 目的地を決める
+	 */
 	private void selectDestination() {
 		// [i][j][a][b]
 		// 交差点番号[a] 道路番号[b]
-		destination = new int[2];
+		destination = new int[4];
 
+		Random r = new Random();
 		/*
 		 * 1. ランダムに(あるいは制限された範囲から
 		 *    ランダムに)位置pを決める。
 		 * 2. 位置pを目的地とする。
 		 */
 
-		// 今回は動き続けるので目的地は設定しない。
+		int i, j, a, b;
+		do {
+			i = r.nextInt(model.L);
+			j = r.nextInt(model.L);
+			a = r.nextInt(4);
+			b = r.nextInt(model.m + 1);
+		} while (!cells[i][j].isValidSite(a, b));
 
+		// 目的地の座標を設定
+		destination[0] = i;
+		destination[1] = j;
+		destination[2] = a;
+		destination[3] = b;
 	}
+
 
 	// 道順を決める
 	private void selectRoute() {
 		// 場合によっては出発地と目的地の座標を
 		// 反対車線側に移動しておく
+		/*
+		 * ・もし出発地を変えたほうがいいなら、反対車線に車がいなければ
+		 *  出発地を変更する。
+		 * ・もし目的地を変えたほうがいいなら、目的地を変更する。
+		 */
 
 		// それぞれの交差点番号における移動方向
-		alpha = new int[4];
+		alpha = new int[model.L][model.L][4];
+		// 念のため通らない交差点には-1を入れておく。
+		for (int i = 0; i < model.L; i++) {
+			for (int j = 0; j < model.L; j++) {
+				for (int a = 0; a < 4; a++) {
+					alpha[i][j][a] = -1;
+				}
+			}
+		}
 
 		/*
 		 * 出発地の交差点番号が0, 2のとき、車は左か右に動く。
@@ -113,11 +148,8 @@ public class Car {
 		 *
 		 * 交差点を回る(0)か道路に抜ける(1)かを設定する。
 		 * つまり、交差点を抜けるサイトに1を設定する。
-		 * 車は直進するので、常に同じサイトから抜ける。
-		 * よって、出発地の交差点番号と同じ交差点番号で
-		 * 常に抜ければ良い。(それ以外の交差点では0である。)
 		 */
-		alpha[origin[0]] = 1;
+
 	}
 
 	// デストラクタ
