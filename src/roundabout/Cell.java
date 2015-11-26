@@ -20,11 +20,8 @@ public class Cell {
 	// 車情報のリストへのアクセス
 	public static List<Car> carList;
 
-	// モデルインスタンスへのアクセス
-	public static OneRoundaboutModel model;
-
 	// 道路サイトの数 (Viewクラスから参照するためpublicに変更)
-	@Deprecated public int m;
+	public int m;
 	// 自分のセルがどこの位置にあるかを知っている必要がある。
 	private int cellI, cellJ;
 
@@ -151,7 +148,6 @@ public class Cell {
 	 * @param n     セットする車番
 	 * @return 車をセットできた場合 true
 	 */
-	@Deprecated
 	public boolean spawnCar(int alpha, int beta, int n) {
 		// 既に別の車がいれば失敗
 		if (mu[alpha][beta] == 1)
@@ -161,29 +157,6 @@ public class Cell {
 		mu[alpha][beta] = 1;
 		num[alpha][beta] = n;
 		return true;
-	}
-
-	/**
-	 * 有効なサイトか？(車を置けない境界条件が考慮される)
-	 *
-	 * @param alpha 交差点番号
-	 * @param beta 道路サイト番号
-	 */
-	public boolean isValidSite(int alpha, int beta) {
-		int L = model.L;
-
-		/*
-		 * 車を置けないサイトだったらfalse
-		 */
-		return !(
-			// 左端のセルの縁から伸びたサイト上だったらfalse
-			(cellI == 0 && alpha == 0 && beta != 0)
-			// 右端のセルの縁から伸びたサイト上だったらfalse
-		|| (cellI == L-1 && alpha == 2 && beta != 0)
-			// 上端のセルの縁から伸びたサイト上だったらfalse
-		|| (cellJ == 0 && alpha == 1 && beta != 0)
-			// 下端のセルの縁から伸びたサイト上だったらfalse
-		|| (cellJ == L-1 && alpha == 3 && beta != 0));
 	}
 
 
