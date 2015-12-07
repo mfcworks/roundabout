@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Scanner;
 
 /**
- * 境界条件なしの正方格子系モデル
+ * １交差点モデル（L = 1, m = 比較的長い）
  * @author T. Miyazaki
  *
  * 以前の版は一時的に以下に退避
@@ -14,11 +14,8 @@ import java.util.Scanner;
  */
 public class OneRoundaboutModel {
 
-	// 外部から参照したいのでpublicにしておく。
-	public int L;			// 正方格子の一辺の数
-	public int m;			// 道路リンクの長さ
-
-	private Cell[][] cells;	// 単位セル
+	private int m;			// 道路リンクの長さ
+	private Cell cell;		// 単位セル
 	private List<Car> cars;	// 車のデータ
 
 
@@ -28,41 +25,43 @@ public class OneRoundaboutModel {
 	 * @param L 正方格子の一辺の数
 	 * @param m 道路サイトの長さ
 	 */
-	public OneRoundaboutModel(int L, int m) {
-		this.L = L;
+	public OneRoundaboutModel(int m) {
 		this.m = m;
 
-		// cells変数の初期化
-		cells = new Cell[L][L];
+		cell = new Cell(0, 0, m);
 
-		for (int i = 0; i < L; i++) {
-			for (int j = 0; j < L; j++) {
-				cells[i][j] = new Cell(i, j, m);
+		// セルの接続を設定する。今回は1つのセルで周期境界にする。
+		cell.setNeighbors(cell, cell, cell, cell);
+
+
+		/*
+			// ★セル同士の結合の設定
+			// システムを上空から見た場合、左上(top-left)を[0][0]、
+			// 右下(right-bottom)を[L-1][L-1]の座標になるようにする。
+			// インデックス[i][j]は、[左右方向][上下方向]の順で用いる。
+			// なお、原論文では、上下方向の軸は上に行くほど小となっている。
+			// 本実装では、利便性のため、これを逆転させているが、
+			// 表記が変わるだけで本質的には何の違いもない。
+			for (int i = 0; i < L; i++) {
+				for (int j = 0; j < L; j++) {
+					// [i][j]のleftは[i-1][j]
+					int left   = i==0 ? L-1 : i-1;
+					// [i][j]のtopは[i][j-1]
+					int top    = j==0 ? L-1 : j-1;
+					// [i][j]のrightは[i+1][j]
+					int right  = i==L-1 ? 0 : i+1;
+					// [i][j]のbottomは[i][j+1]
+					int bottom = j==L-1 ? 0 : j+1;
+
+					cells[i][j].setNeighbor(
+							cells[left][j],
+							cells[i][top],
+							cells[right][j],
+							cells[i][bottom]);
+				}
 			}
-		}
+		 */
 
-		// セルの接続を設定する。
-		//
-		// システムを上空から見た場合、左上(top-left)を[0][0]、
-		// 右下(right-bottom)を[L-1][L-1]の座標になるようにする。
-		// インデックス[i][j]は、[左右方向][上下方向]の順で用いる。
-		// なお、原論文では、上下方向の軸は上に行くほど小となっている。
-		// 本実装では、利便性のため、これを逆転させているが、
-		// 表記が変わるだけで本質的には何の違いもない。
-		for (int i = 0; i < L; i++) {
-			for (int j = 0; j < L; j++) {
-				// [i][j]のleftは[i-1][j]
-				Cell left   = i==0 ? null : cells[i-1][j];
-				// [i][j]のtopは[i][j-1]
-				Cell top    = j==0 ? null : cells[i][j-1];
-				// [i][j]のrightは[i+1][j]
-				Cell right  = i==L-1 ? null : cells[i+1][j];
-				// [i][j]のbottomは[i][j+1]
-				Cell bottom = j==L-1 ? null : cells[i][j+1];
-
-				cells[i][j].setNeighbors(left, top, right, bottom);
-			}
-		}
 	}
 
 	/**
@@ -84,10 +83,8 @@ public class OneRoundaboutModel {
 
 		// CellとCarでの相互参照ができるようにする
 		Cell.carList = cars;
-		Car.cells = cells;
-
-		// とりあえず
-		Car.model = this;
+		Car.cell = cell;
+		Car.m = this.m;
 
 		// numCars 台の車を発生
 		for (int i = 1; i <= numCars; i++) {
@@ -99,17 +96,9 @@ public class OneRoundaboutModel {
 	// アップデート
 	public void update() {
 		// (全ての)セルをupdateしてから
-		for (int i = 0; i < L; i++) {
-			for (int j = 0; j < L; j++) {
-				cells[i][j].updateCell();
-			}
-		}
+		cell.updateCell();
 		// (全ての)セルのバッファをスワップする
-		for (int i = 0; i < L; i++) {
-			for (int j = 0; j < L; j++) {
-				cells[i][j].swapBuffer();
-			}
-		}
+		cell.swapBuffer();
 	}
 
 	// 境界条件の処理
