@@ -1,4 +1,4 @@
-package simpleStack;
+package simpleQueue;
 
 import java.util.ArrayList;
 import java.util.List;

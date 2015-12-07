@@ -1,4 +1,4 @@
-package simpleStack;
+package simpleQueue;
 
 import java.awt.Color;
 import java.awt.Graphics;
