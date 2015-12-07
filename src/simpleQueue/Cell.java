@@ -1,6 +1,8 @@
 package simpleQueue;
 
+import java.util.ArrayDeque;
 import java.util.List;
+import java.util.Queue;
 
 /*
  * 印南論文 第4章 ラウンドアバウト交差点ルールの実装
@@ -20,53 +22,79 @@ public class Cell {
 	// 車情報のリストへのアクセス
 	public static List<Car> carList;
 
-	// 道路サイトの数 (Viewクラスから参照するためpublicに変更)
-	public int m;
 	// 自分のセルがどこの位置にあるかを知っている必要がある。
 	private int cellI, cellJ;
 
+
+	/***** プロパティ *****/
+	// 道路サイトの数
+	public final int m;
+	// 車線数
+	public final int n;
+
+	/***** 自己データ *****/
+	// 交差点サイト(4サイト、交差点番号0～3)【車番を格納】
+	public int[] roundabout;
+	public int[] roundabout_new; // 更新用バッファ
+	// 道路サイト【車番を格納】
+	public Queue<Integer>[][] roadSites;
+	public int[][] roadNums; // 現時刻で各道路サイトにいる車の数
+
+	/***** 接続 *****/
 	// 上下左右に隣接するCellへの参照
 	// (circular doubly linked matrix (not a list))
 	private Cell left, top, right, bottom;
 
 	// サイトにおける車の存在を格納する変数
-	public  int[][] mu, mu_new;
-	private int[][] mu1, mu2;
+//	public  int[][] mu, mu_new;
+//	private int[][] mu1, mu2;
 
 	// サイトにおける車番を格納する変数
-	public  int[][] num, num_new;
-	private int[][] num1, num2;
+//	public  int[][] num, num_new;
+//	private int[][] num1, num2;
 
 	// サイトにおける車の移動方向を格納する変数
 	public int[] a;
 
 
 	// swapフラグ
-	private boolean swapFlag = false;
+//	private boolean swapFlag = false;
 
 
+	// コンストラクタ
 	/**
 	 * 単位セルを初期化します。
 	 *
 	 * @param i 横方向のインデックス(→に行くほど大)
 	 * @param j 縦方向のインデックス(↓に行くほど大)
 	 * @param m 道路サイト長
+	 * @param n 車線数
 	 */
-	public Cell(int i, int j, int m) {
+	@SuppressWarnings("unchecked")
+	public Cell(int i, int j, int m, int n) {
 		this.cellI = i;
 		this.cellJ = j;
 
 		assert m >= 2; // mが1以下だと道路サイトの更新ルールが適合しない
 		this.m = m;
 
+		assert n >= 1; // 車線数は1以上。
+		this.n = n;
+
 		// 配列の確保
-		mu1 = new int[4][m + 1];
-		mu2 = new int[4][m + 1];
-		num1 = new int[4][m + 1];
-		num2 = new int[4][m + 1];
+		roundabout = new int[4];
+		roundabout_new = new int[4];
+
+		roadSites = (Queue<Integer>[][]) new ArrayDeque<?>[4][m];
+		for (int u = 0; u < 4; u++) {
+			for (int mm = 0; mm < m; mm++) {
+				roadSites[u][mm] = new ArrayDeque<Integer>();
+			}
+		}
+		roadNums = new int[4][m];
+
 		a = new int[4];
 
-		swapBuffer();
 	}
 
 
@@ -102,25 +130,6 @@ public class Cell {
 		return countMoved();
 	}
 
-	/**
-	 * バッファをスワップします。
-	 * 全てのセルをアップデートした後に呼びます。
-	 */
-	public void swapBuffer() {
-		if (swapFlag) {
-			mu     = mu1;
-			mu_new = mu2;
-			num     = num1;
-			num_new = num2;
-		} else {
-			mu     = mu2;
-			mu_new = mu1;
-			num     = num2;
-			num_new = num1;
-		}
-		swapFlag = !swapFlag;
-	}
-
 
 	/**
 	 * アップデートの前後で動いた車の台数を数えて返します。
@@ -132,7 +141,8 @@ public class Cell {
 
 		for (int i = 0; i < 4; i++) {
 			for (int j = 0; j < m + 1; j++) {
-				c += (num[i][j] != num_new[i][j] ? 1 : 0);
+				//c += (num[i][j] != num_new[i][j] ? 1 : 0);
+				// TODO 動いた車の台数を数える機能の実装
 			}
 		}
 
@@ -142,13 +152,14 @@ public class Cell {
 
 	/**
 	 * 指定されたサイトに車を発生させようと試みます。
+	 * TODO: この辺は全く別のやり方を考える！
 	 *
 	 * @param alpha 交差点番号
 	 * @param beta  道路サイト番号
 	 * @param n     セットする車番
 	 * @return 車をセットできた場合 true
 	 */
-	public boolean spawnCar(int alpha, int beta, int n) {
+/*	public boolean spawnCar(int alpha, int beta, int n) {
 		// 既に別の車がいれば失敗
 		if (mu[alpha][beta] == 1)
 			return false;
@@ -157,7 +168,7 @@ public class Cell {
 		mu[alpha][beta] = 1;
 		num[alpha][beta] = n;
 		return true;
-	}
+	}*/
 
 
 	/**
@@ -167,31 +178,46 @@ public class Cell {
 	 * @return 動ける場合1、動けない場合0
 	 */
 	private int toMove(int alpha) {
+		/*
+		 * 交差点サイト mu[n][0] は ra[n] に置き換え。
+		 * 道路サイト入り口 mu[n][1] は rd[n] に置き換え。
+		 */
+
+		int[] ra = new int[4]; // 交差点サイトに車がいるかいないか
+		for (int i = 0; i < 4; i++) {
+			ra[i] = (roundabout[i] == 0 ? 0 : 1);
+		}
+
+		int[] rd = new int[4];
+		for (int i = 0; i < 4; i++) {
+			// 道路サイト入り口がfullなら1, fullでなければ0
+			rd[i] = (roadNums[i][0] == n ? 1 : 0);
+		}
 
 		int u   = alpha;			// α
 		int up  = (alpha + 1) % 4;	// α+
 		int upp = (alpha + 2) % 4;	// α++
 		int um  = (alpha + 3) % 4;	// α-
 
-		// 以下の条件は全て排反事象なので、返り値は必ず0または1になるはず。
 
 				// 自車が交差点を回ろうとする先に車がいない場合
-		int k = mu[u][0] * (1-a[u]) * (1-mu[up][0])
-				// 自車が道路サイトに抜けようとする先に車がいない場合
-		      + mu[u][0] * a[u] * (1-mu[u][1])
+		int k = ra[u] * (1-a[u]) * (1-ra[up])
+				// 自車が道路サイトに抜けようとする先のサイトがfullでない場合
+		      + ra[u] * a[u] * (1-rd[u])
 		      	// 1台前の車が交差点を周ろうとし、その前方に車がいない場合
-		      + mu[u][0] * (1-a[u]) * mu[up][0] * (1-a[up]) * (1-mu[upp][0])
-		      	// 1台前の車が道路に抜けようとし、その先に車がいない場合
-		      + mu[u][0] * (1-a[u]) * mu[up][0] * a[up] * (1-mu[up][1])
+		      + ra[u] * (1-a[u]) * ra[up] * (1-a[up]) * (1-ra[upp])
+		      	// 1台前の車が道路に抜けようとし、その先のサイトがfullでない場合
+		      + ra[u] * (1-a[u]) * ra[up] * a[up] * (1-rd[up])
 		      	// 2台前の車が交差点を回ろうとし、その前方に車がいない場合
-		      + mu[u][0] * (1-a[u]) * mu[up][0] * (1-a[up]) * mu[upp][0] * (1-a[upp]) * (1-mu[um][0])
-		      	// 2台前の車が道路に抜けようとし、その先に車がいない場合
-		      + mu[u][0] * (1-a[u]) * mu[up][0] * (1-a[up]) * mu[upp][0] * a[upp] * (1-mu[upp][1])
+		      + ra[u] * (1-a[u]) * ra[up] * (1-a[up]) * ra[upp] * (1-a[upp]) * (1-ra[um])
+		      	// 2台前の車が道路に抜けようとし、その先のサイトがfull出ない場合
+		      + ra[u] * (1-a[u]) * ra[up] * (1-a[up]) * ra[upp] * a[upp] * (1-rd[upp])
 		      	// 3台前(=真後ろ)の車も交差点を回ろうとし、全ての車が交差点を回る場合
-		      + mu[u][0] * (1-a[u]) * mu[up][0] * (1-a[up]) * mu[upp][0] * (1-a[upp]) * mu[um][0] * (1-a[um])
-		      	// 3台前(=真後ろ)の車が道路に抜けようとし、その先に車がいない場合
-		      + mu[u][0] * (1-a[u]) * mu[up][0] * (1-a[up]) * mu[upp][0] * (1-a[upp]) * mu[um][0] * a[um] * (1-mu[um][1]);
+		      + ra[u] * (1-a[u]) * ra[up] * (1-a[up]) * ra[upp] * (1-a[upp]) * ra[um] * (1-a[um])
+		      	// 3台前(=真後ろ)の車が道路に抜けようとし、その先のサイトがfullでない場合
+		      + ra[u] * (1-a[u]) * ra[up] * (1-a[up]) * ra[upp] * (1-a[upp]) * ra[um] * a[um] * (1-rd[um]);
 
+		// 以上の条件は全て排反事象なので、返り値は必ず0または1になるはず。
 		assert (k == 0 || k == 1);
 
 		return k;
@@ -205,22 +231,33 @@ public class Cell {
 	 */
 	private int toStop(int alpha) {
 
+		int[] ra = new int[4]; // 交差点サイトに車がいるかいないか
+		for (int i = 0; i < 4; i++) {
+			ra[i] = (roundabout[i] == 0 ? 0 : 1);
+		}
+
+		int[] rd = new int[4];
+		for (int i = 0; i < 4; i++) {
+			// 道路サイト入り口がfullなら1, fullでなければ0
+			rd[i] = (roadNums[i][0] == n ? 1 : 0);
+		}
+
 		int u   = alpha;			// α
 		int up  = (alpha + 1) % 4;	// α+
 		int upp = (alpha + 2) % 4;	// α++
 		int um  = (alpha + 3) % 4;	// α-
 
-		// 以下の条件は全て排反事象なので、返り値は必ず0または1になるはず。
 
 				// 自車が道路サイトに抜けようとする先に別の車がいる場合
-		int k = mu[u][0] * a[u] * mu[u][1]
+		int k = ra[u] * a[u] * rd[u]
 				// 1台前の車が道路サイトに抜けようとし、その先に別の車がいて動けない場合
-		      + mu[u][0] * (1-a[u]) * mu[up][0] * a[up] * mu[up][1]
+		      + ra[u] * (1-a[u]) * ra[up] * a[up] * rd[up]
 		    	// 2台前の車が道路サイトに抜けようとし、その先に別の車がいて動けない場合
-		      + mu[u][0] * (1-a[u]) * mu[up][0] * (1-a[up]) * mu[upp][0] * a[upp] * mu[upp][1]
+		      + ra[u] * (1-a[u]) * ra[up] * (1-a[up]) * ra[upp] * a[upp] * rd[upp]
 		    	// 3台前(=真後ろ)の車が道路サイトに抜けようとし、その先に別の車がいて動けない場合
-		      + mu[u][0] * (1-a[u]) * mu[up][0] * (1-a[up]) * mu[upp][0] * (1-a[upp]) * mu[um][0] * a[um] * mu[um][1];
+		      + ra[u] * (1-a[u]) * ra[up] * (1-a[up]) * ra[upp] * (1-a[upp]) * ra[um] * a[um] * rd[um];
 
+		// 以上の条件は全て排反事象なので、返り値は必ず0または1になるはず。
 		assert (k == 0 || k == 1);
 
 		return k;
@@ -244,6 +281,41 @@ public class Cell {
 	 *
 	 */
 
+	// @苦肉の策
+	// roundabout[n-1]の車がroundabout[n]に動けるかどうか
+	private boolean movable(int n, int start) {
+
+		// 全ての(この場合は4つの)サイトに車がいて、それぞれが
+		// 交差点を回る場合、再帰呼び出しが無限ループしてしまう。
+		// それを回避するため、nとstartが等しくなったときは
+		// 自分自身が動けるかどうかを調べるために自分自身を調べる
+		// という状況なので、trueを返す。(意味不)
+		if (n == start)
+			return true;
+
+		// 自分の位置に車がいなければ後ろの車は入ってこれる。
+		if (roundabout[n] == 0)
+			return true;
+
+		/* 以下、自分の位置に車がいる場合 */
+
+		// 自分の車が道路へ抜けたいならば、前段の処理で道路がfullであった場合なので、自分の車が動けない。
+		// よって後ろの車も動けない。
+		if (a[n] == 1)
+			return false;
+
+		/* 以下、自分の車が交差点を回る場合 */
+
+		// 前の車が動ければ追随できるためtrue。
+		int np = (n + 1) % 4;
+
+		// startが無意味な値の場合、再帰呼び出しでない。
+		// 再帰呼び出しでない場合、startにnをセットする。
+		// 再帰呼び出しの場合、startはそのまま渡す。
+		return movable(np, (start < 0 ? n : start));
+	}
+
+
 
 	/**
 	 * 交差点サイトをアップデートします。
@@ -256,60 +328,50 @@ public class Cell {
 	 *
 	 */
 	private void updateRoundabouts() {
-		// 4箇所ある交差点を更新する。
+		// 現時刻の交差点サイトにおける車番は roundabout[i] に格納されている。
+
+		// 道路サイトへ抜ける処理
+		for (int u = 0; u < 4; u++) {
+			// 交差点にいる車が道路に抜けたくて、道路が空いている場合
+			if (roundabout[u] != 0 && a[u] == 1 && roadNums[u][0] != n) {
+				// 道路に抜ける
+				roadSites[u][0].add(roundabout[u]);
+				// 道路に抜けたので、今は車はいない
+				roundabout[u] = 0;
+			}
+		}
+
+		// 交差点を回る処理
+		int[] temp = new int[4];
+
+		for (int u = 0; u < 4; u++) {
+			int um = (u + 3) % 4;
+			// もし、後ろの車が「動ける」ならば、その車を動かす。
+			if (movable(um, -1))
+				temp[u] = roundabout[um];
+			// 「動けない」ならば、車番は更新されない。
+			else
+				temp[u] = roundabout[u];
+		}
+
+		for (int i = 0; i < 4; i++)
+			roundabout[i] = temp[i];
+
+
+		// 最後に、
+		// 接続された道路から車が入ってくる処理
 		for (int u = 0; u < 4; u++) {
 
-			int um  = (u + 3) % 4;	// α-
+			Cell[] cells = {bottom, left, top, right};
+			int up = (u + 1) % 4;
 
-			// 交差点サイトに接続している、
-			// 隣接セルの道路サイトの状態
-			int mu_in = 0, num_in = 0;
-
-			// TODO: 隣接セルの配列化と↓の最適化
-			// TODO: [Car]がヌルポだったら参照しない(非周期境界のとき)
-			switch (u) {
-			case 0:
-				mu_in  = bottom.mu[1][m];
-				num_in = bottom.num[1][m];
-				break;
-			case 1:
-				mu_in  = left.mu[2][m];
-				num_in = left.num[2][m];
-				break;
-			case 2:
-				mu_in  = top.mu[3][m];
-				num_in = top.num[3][m];
-				break;
-			case 3:
-				mu_in  = right.mu[0][m];
-				num_in = right.num[0][m];
-				break;
+			// 道路が空いていて、入ってきたい車がいる場合
+			if (roundabout[u] == 0 && cells[u].roadNums[up][m-1] != 0) {
+				roundabout[u] = cells[u].roadSites[up][m-1].remove();
 			}
-
-			mu_new[u][0] =
-				// ■後ろの交差点サイトから車が進入してくる場合
-				// <=> 後ろの車が動ける条件が真で、それが後ろの車が道路サイトに抜けることによるものではない場合
-				// 注：第2項が真になる時は常に第1項も真になっている(論理包含の関係)ので、この式が負になることはない。
-				  toMove(um) - (mu[um][0] * a[um] * (1-mu[um][1]))
-				// ■道路サイトから車が進入してくる場合 (交差点内の車が交差点を回るときはそちらが優先される)
-				// ・進入先の交差点の1つ後ろの交差点サイトに車がいない場合
-				// 進入先のサイトに車がいない場合(第1項)／進入先のサイトに車がいるが、動ける場合(第2項)
-				+ mu_in * (1-mu[um][0]) * ((1-mu[u][0]) + toMove(u))
-				// ・進入先の交差点の1つ後ろの交差点サイトに車がいるが、道路に抜ける場合
-				// 進入先のサイトに車がいない場合(第1項)／進入先のサイトに車がいるが、動ける場合(第2項)
-				+ mu_in * mu[um][0] * a[um] * ((1-mu[u][0]) + toMove(u))
-				// ■交差点サイトにいる車が動けない場合
-				+ toStop(u);
-
-			// 車のインデックスの更新
-			// 排反事象である上記の各条件の式に、そのサイトにおける車の車番を乗じることで求められる。
-			// いずれの条件も満たされなければ0になる。これは車がいないことを示す。
-			num_new[u][0] =
-				  num[um][0] * (toMove(um) - (mu[um][0] * a[um] * (1-mu[um][1])))
-				+ num_in * (mu_in * (1-mu[um][0]) * ((1-mu[u][0]) + toMove(u)))
-				+ num_in * (mu_in * mu[um][0] * a[um] * ((1-mu[u][0]) + toMove(u)))
-				+ num[u][0] * toStop(u);
 		}
+
+
 	}
 
 	/*
@@ -317,79 +379,21 @@ public class Cell {
 	 */
 	private void updateRoads() {
 
-		// 4つの交差点番号についてループを回す
+		// 4つの交差点についてループを回す
 		for (int u = 0; u < 4; u++) {
 
-			// 交差点サイトに接続している、
-			// 隣接セルの道路サイトの状態
-			Cell out = null;
-			int out_a = 0;
+			// m個の道路サイトについて、m-1回ループを回す
+			for (int i = 0; i < m - 1; i++) {
+				// この道路サイトにいる車の数か、次の道路サイトの空きの数の小さい方だけ動ける。
+				int moves = Math.min(roadNums[u][i], n - roadNums[u][i+1]);
 
-			// TODO: 隣接セルの配列化と↓の最適化
-			// TODO: [Car]がヌルポだったら参照しない(非周期境界のとき)
-			switch (u) {
-			case 0:
-				out = left;
-				out_a = 3;
-				break;
-			case 1:
-				out = top;
-				out_a = 0;
-				break;
-			case 2:
-				out = right;
-				out_a = 1;
-				break;
-			case 3:
-				out = bottom;
-				out_a = 2;
-				break;
+				for (int j = 0; j < moves; j++) {
+					roadSites[u][i+1].add(roadSites[u][i].remove());
+				}
 			}
 
-			// 進入する交差点のひとつ手前の交差点番号
-			int out_am = (out_a + 3) % 4;
-
-			/*
-			 * 道路の入口となる道路サイトのアップデート
-			 */
-			mu_new[u][1] =
-					// 交差点にいる車がこの道路サイトへ抜けてきた場合
-					mu[u][0] * a[u] * (1-mu[u][1])
-					// 前に車がいて動けない場合
-					+ mu[u][1] * mu[u][2];
-
-			num_new[u][1] =
-					  num[u][0] * (mu[u][0] * a[u] * (1-mu[u][1]))
-					+ num[u][1] * (mu[u][1] * mu[u][2]);
-
-			/*
-			 * 道路の出口となる道路サイトのアップデート
-			 */
-			mu_new[u][m] =
-					// ひとつ手前の道路サイトの車が移動する場合
-					  mu[u][m-1] * (1-mu[u][m])
-					// 進入する交差点サイトにいる車が動けない場合
-					+ mu[u][m] * out.toStop(out_a)
-					// 交差点を回る車が優先的に動く場合
-					// <=> 進入する交差点のひとつ手前の交差点にいる車が動け、かつ道路に抜けない場合
-					+ mu[u][m] * (out.toMove(out_am) - out.mu[out_am][0] * out.a[out_am] * (1-out.mu[out_am][1]));
-
-			num_new[u][m] =
-					  num[u][m-1] * (mu[u][m-1] * (1-mu[u][m]))
-					+ num[u][m] * (mu[u][m] * out.toStop(out_a))
-					+ num[u][m] * (mu[u][m] * (out.toMove(out_am) - out.mu[out_am][0] * out.a[out_am] * (1-out.mu[out_am][1])));
-
-			/*
-			 * 交差点の入り口と出口を除く道路サイトについてループを回す
-			 */
-			for (int i = 2; i <= m - 1; i++) {
-				// 後ろの車が移動する場合(第1項)または前に車がいて動けない場合(第2項)
-				mu_new[u][i] = (mu[u][i-1] * (1-mu[u][i])) + (mu[u][i] * mu[u][i+1]);
-
-				num_new[u][i] = num[u][i-1] * (mu[u][i-1] * (1-mu[u][i]))
-						+ num[u][i] * (mu[u][i] * mu[u][i+1]);
-			}
 		}
+
 	}
 
 
@@ -399,8 +403,8 @@ public class Cell {
 	private void updateA() {
 		for (int u = 0; u < 4; u++) {
 			// 交差点(α,0)に車がいるとき (車がいないサイトについてはa[x]は参照されない)
-			if (num[u][0] != 0) {
-				Car car = carList.get(num[u][0]);
+			if (roundabout[u] != 0) {
+				Car car = carList.get(roundabout[u]);
 				// 交差点(i,j,α)を回るか、抜けるか
 //				a[u] = car.alpha[cellI][cellJ][u];
 				a[u] = car.alpha[u];
