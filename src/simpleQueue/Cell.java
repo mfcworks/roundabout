@@ -35,7 +35,7 @@ public class Cell {
 	/***** 自己データ *****/
 	// 交差点サイト(4サイト、交差点番号0～3)【車番を格納】
 	public int[] roundabout;
-	public int[] roundabout_new; // 更新用バッファ
+
 	// 道路サイト【車番を格納】
 	public Queue<Integer>[][] roadSites;
 	public int[][] roadNums; // 現時刻で各道路サイトにいる車の数
@@ -45,20 +45,9 @@ public class Cell {
 	// (circular doubly linked matrix (not a list))
 	private Cell left, top, right, bottom;
 
-	// サイトにおける車の存在を格納する変数
-//	public  int[][] mu, mu_new;
-//	private int[][] mu1, mu2;
-
-	// サイトにおける車番を格納する変数
-//	public  int[][] num, num_new;
-//	private int[][] num1, num2;
 
 	// サイトにおける車の移動方向を格納する変数
 	public int[] a;
-
-
-	// swapフラグ
-//	private boolean swapFlag = false;
 
 
 	// コンストラクタ
@@ -83,7 +72,6 @@ public class Cell {
 
 		// 配列の確保
 		roundabout = new int[4];
-		roundabout_new = new int[4];
 
 		roadSites = (Queue<Integer>[][]) new ArrayDeque<?>[4][m];
 		for (int u = 0; u < 4; u++) {
@@ -94,7 +82,6 @@ public class Cell {
 		roadNums = new int[4][m];
 
 		a = new int[4];
-
 	}
 
 
@@ -264,22 +251,6 @@ public class Cell {
 	}
 
 
-	/*
-	 * アップデートルールについて
-	 *
-	 * 全てのサイトは、車がいるかいないかの2状態を持つ(変数 mu)。
-	 * 車がいる場合、車の番号が入っている(変数 num)。
-	 * 車がいない場合は、車の番号は 0 である。
-	 * １ステップのアップデートで、車が出たセルに別の車が入ったり、
-	 * 一台の車が２サイト以上動いたりはしない。
-	 *
-	 * 次の時刻t+1のサイトxの状態は、車の移動がなかった場合、そのまま、
-	 * 車の移動があった場合、その変化後の状態になる。
-	 *
-	 * 全てのサイトは、その隣接するサイトの状態のみによって
-	 * 次の状態が決定される。
-	 *
-	 */
 
 	// @苦肉の策
 	// roundabout[n-1]の車がroundabout[n]に動けるかどうか
